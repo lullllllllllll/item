@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.0;
+
+import "./IERC20.sol"; //导入 IERC20
+
+contract faucet is IERC20 {
+
+    mapping(address => uint256) public override balanceOf;
+
+    mapping(address => mapping(address => uint256)) public override allowance;
+
+    uint256 public override totalSupply; //代币总供给
+
+    string public  constant name = "shuilongtou" ;  //名称
+    string public constant symbol = "SLT";  //符号
+
+    uint8 public decimals = 18;  //小数位数
+
+    // 实现transfer函数，代币转账逻辑
+    function transfer(address recipient, uint amount) external override returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[recipient] += amount;
+        emit Transfer(msg.sender, recipient, amount);
+        return true;
+    }
+
+    // 实现approve函数，代币授权逻辑
+    function approve(address to, uint amount) external override returns (bool) {
+        allowance[msg.sender][to] = amount;
+        emit Approval(msg.sender, to, amount);
+        return true;
+    }
+
+    // 实现transferFrom函数，代币授权转账逻辑
+    function transferFrom(address sender, address recipient, uint amount) external override returns (bool) {
+        allowance[sender][msg.sender] -= amount;
+        balanceOf[sender] -= amount;
+        balanceOf[recipient] += amount;
+        emit Transfer(sender, recipient, amount);
+        return true;
+    }
+
+    // 铸造代币， 从0地址转账给调用者地址
+    function mint(uint amount) external {
+        balanceOf[msg.sender] += amount;
+        totalSupply += amount;
+        emit Transfer(address(0), msg.sender, amount);
+    }
+
+    // 销毁代币，从调用者地址转账给0地址
+    function burn(uint amount) external {
+        balanceOf[msg.sender] -= amount;
+        totalSupply -= amount;
+        emit Transfer(msg.sender, address(0), amount);
+    }
+
+    
+}
+
+// ERC20代币的水龙头合约
+contract Faucet is faucet {
+
+    uint public amountAllowed = 100; // 每次领100单位代币
+    address public tokenContract; // token合约地址
+    mapping(address => bool) public requestedAddress; // 记录领取过代币的地址
+
+    // sendToken事件
+    event SendToken(address indexed Receiver, uint256 indexed Amount);
+
+    // 部署时设定REC20代币合约
+    constructor(address _tonkenContract) {
+        tokenContract = _tonkenContract; // set token contract
+    }
+
+    // 用户领取代币函数
+    function requestTokens() external {
+        require(!requestedAddress[msg.sender], "can't Request Multiple times!"); // 每个地址只能领取一次
+        IERC20 token = IERC20(tokenContract); // 创建IERC20合约对象
+        require(token.balanceOf(address(this)) >= amountAllowed,"Faucet Empty!"); // 水龙头空了
+
+        token.transfer(msg.sender, amountAllowed); //发送token
+        requestedAddress[msg.sender] = true; // 记录领取地址
+
+        emit SendToken(msg.sender, amountAllowed); //释放SendToken事件
+    }
+}
