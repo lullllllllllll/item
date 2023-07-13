@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity ^0.8.17;
+
+contract MakeFriends {
+
+    mapping(address => mapping(address => bool)) internal Friendslist;
+    mapping(address => mapping(address => bool)) internal Blacklist;
+    mapping(address => Request[]) internal Requestlist;
+    mapping(address => Message[]) internal Messagebox;
+
+    struct Request{
+        address from;
+        address to;
+        string mass;
+        uint256 times;
+    }
+
+    struct Message{
+        string mass;
+        uint256 times;
+    }
+
+    Request Req; 
+    
+
+    string message = "hellofriend";
+
+ 
+    
+    function friendrequest(address recipient) public {
+        require(Friendslist[msg.sender][recipient] == false);
+        Req = Request(msg.sender, recipient, message, block.timestamp);
+        Requestlist[recipient].push(Req);
+              
+    }
+
+    function makefriend(address requester) public returns (bool) {
+        require(Req.from == requester, "she is't in the list");
+        Friendslist[msg.sender][requester] = true;
+        Friendslist[requester][msg.sender] = true;       
+        return true;
+    }
+    
+    function ViewFriendlist(address recipient) public view returns (bool) {
+        // require(Requestlist[msg.sender].length == 0, "you have no request");
+        return Friendslist[msg.sender][recipient];
+    }
+
+    function blacklist(address targetuser) public returns (bool) {
+        Blacklist[msg.sender][targetuser] = true;
+        require(Friendslist[msg.sender][targetuser] == true);
+        delete Friendslist[msg.sender][targetuser];
+        return true;
+    }
+
+    function sendmsg(address recipient, string  memory xiaoxi) public  returns (bool) {
+        require(Friendslist[msg.sender][recipient] == true, "she is not your friend");
+        require(Friendslist[recipient][msg.sender] == true, "you are not her friend");
+        Message memory a = Message(xiaoxi, block.timestamp);
+        Messagebox[recipient].push(a);
+        return true;
+    }
+
+    function ViewFriendRequests() public view returns (Request[] memory) {
+        // require(Requestlist[msg.sender].length == 0, "you have no request");
+        return Requestlist[msg.sender];
+    }
+
+    function ViewMessagebox() public view returns (Message[] memory) {
+        // require(Requestlist[msg.sender].length == 0, "you have no request");
+        return Messagebox[msg.sender];
+    }
+}
